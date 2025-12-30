@@ -32,12 +32,13 @@ indexes: dict[StoryType, int] = {
 
 
 def extract_normal(chapter: Chapter):
-    folder_name = sanitize_filename(f"{indexes[chapter.entryType]:02d}-{chapter.name}")
+    folder_name = sanitize_filename(f"{indexes[chapter.entryType]:02d}_{chapter.name}")
     indexes[chapter.entryType] += 1
     to_folder = chapter.entryType.save_dir / folder_name
     os.makedirs(to_folder, exist_ok=True)
 
     stage_index = 1
+    text = ""
     for stage in chapter.infoUnlockDatas:
         if stage.storyCode:
             filename = sanitize_filename(
@@ -49,12 +50,17 @@ def extract_normal(chapter: Chapter):
             )
         stage_index += 1
 
-        extract_stage(chapter, stage, to_folder / filename)
+        text += extract_stage(chapter, stage, to_folder / filename)
+        text += "\n\n"
+
+    chapter_all_file = to_folder / f"00_{sanitize_filename(chapter.name)}.txt"
+    with open(chapter_all_file, "w", encoding="utf-8") as f:
+        f.write(text.strip() + "\n")
 
 
 def extract_other(chapters: list[Chapter]):
     for chapter in chapters:
-        filename = sanitize_filename(f"{indexes[StoryType.NONE]:03d}-{chapter.name}")
+        filename = sanitize_filename(f"{indexes[StoryType.NONE]:03d}_{chapter.name}")
         indexes[StoryType.NONE] += 1
 
         if len(chapter.infoUnlockDatas) == 1:

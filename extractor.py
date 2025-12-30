@@ -52,10 +52,15 @@ def extract_stage(chapter: Chapter, stage: Stage, to: Path):
     if dialog == "":
         dialog = "<无对话>"
 
+    text = ""
+    text += f"# {title}"
+    text += "\n\n--- 故事梗概 ---\n\n"
+    text += overview
+    text += "\n\n--- 对话文本 ---\n\n"
+    text += dialog
+    text += "\n\n--- END ---\n"
+
     with open(to, "w", encoding="utf-8") as f:
-        f.write(f"# {title}")
-        f.write("\n\n--- 故事梗概 ---\n\n")
-        f.write(overview)
-        f.write("\n\n--- 对话文本 ---\n\n")
-        f.write(dialog)
-        f.write("\n\n--- END ---\n")
+        f.write(text)
+
+    return text
