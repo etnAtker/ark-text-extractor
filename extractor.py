@@ -41,11 +41,13 @@ def extract_stage(chapter: Chapter, stage: Stage, to: Path):
         title += f" / {stage.avgTag}"
 
     if stage.storyInfo:
-        overview = (STORY_DIR / f"{stage.storyInfo}.txt").read_text(encoding="utf-8")
+        overview = (
+            (STORY_DIR / f"{stage.storyInfo}.txt").read_text(encoding="utf-8").strip()
+        )
     else:
         overview = "<无文本>"
 
-    dialog = (STORY_DIR / f"{stage.storyTxt}.txt").read_text(encoding="utf-8")
+    dialog = (STORY_DIR / f"{stage.storyTxt}.txt").read_text(encoding="utf-8").strip()
     dialog = extract_dialog(dialog)
     if dialog == "":
         dialog = "<无对话>"
