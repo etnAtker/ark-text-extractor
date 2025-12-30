@@ -1,0 +1,7 @@
+{
+    "typeCheckingMode": "standard",
+    "reportDuplicateImport": "error",
+    "reportInconsistentConstructor": "error",
+    "reportInvalidStringEscapeSequence": "error",
+    "reportUnnecessaryTypeIgnoreComment": "warning"
+}
