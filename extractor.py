@@ -18,9 +18,9 @@ def extract_dialog(lines: str):
                 raise ValueError(f"Invalid dialog line: {line}")
 
             name = matches.group(1)
-            dialog = matches.group(2)
+            dialog = matches.group(2).strip()
 
-            if dialog.strip() == "":
+            if dialog == "":
                 continue
 
             dialog_lines.append(f"{name}: {dialog}\n" if name != "" else f"{dialog}\n")
