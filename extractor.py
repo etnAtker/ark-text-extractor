@@ -12,7 +12,8 @@ def extract_dialog(lines: str):
     raw_lines = lines.split("\n")
     dialog_lines: list[str] = []
     for line in raw_lines:
-        if line.strip().startswith("[name="):
+        striped = line.strip()
+        if striped.startswith("[name="):
             matches = re.search(r"^\[name=\s?[\"'](.*)[\"'].*\]\s?(.*)$", line)
             if not matches:
                 raise ValueError(f"Invalid dialog line: {line}")
@@ -24,12 +25,14 @@ def extract_dialog(lines: str):
                 continue
 
             dialog_lines.append(f"{name}: {dialog}\n" if name != "" else f"{dialog}\n")
-        elif line.strip().startswith("[Sticker("):
-            matches = re.search(r"^\[Sticker.+text\s?=\s?[\"'](.+?)[\"'].*$", line)
+        elif striped.startswith("[Sticker(") or striped.startswith("[Subtitle("):
+            matches = re.search(r"^(\[Sticker|\[Subtitle).+text\s?=\s?[\"'](.+?)[\"'].*$", line)
             if not matches:
                 continue
 
-            chunk = matches.group(1)
+            chunk = matches.group(2)
+            if chunk is None:
+                raise ValueError(f"Invalid dialog line: {line}")
             if chunk == "":
                 continue
 
