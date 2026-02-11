@@ -40,6 +40,10 @@ def extract_dialog(lines: str):
             chunk = chunk[:-2] if chunk.endswith(r"\n") else chunk
 
             dialog_lines.append(chunk.replace(r"\n", "\n") + "\n")
+        elif striped.startswith("[animtext("):
+            matches = re.search(r"^\[animtext\(.+\]\s?(.*)$", line)
+            dialog_lines.append(f"{matches.group(1)}\n")
+
         elif not line.strip().startswith("["):
             dialog_lines.append(line + "\n")
 
