@@ -16,6 +16,11 @@
    git submodule update --init
    ```
 
+2. (游戏数据更新时) 更新游戏数据子模块：
+   ```bash
+   git submodule update --remote --rebase
+   ```
+
 ## 运行
 
 ```bash
