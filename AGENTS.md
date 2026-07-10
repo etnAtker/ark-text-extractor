@@ -12,10 +12,19 @@ Agent 在本仓库中承担两类职责：
 
 ```
 .
-├── main.py              # 入口：解析 story_review_table.json，遍历章节并调用提取逻辑
-├── extractor.py         # 核心提取逻辑：解析游戏原始文本，输出格式化剧情文件
-├── models.py            # 数据模型：Chapter、Stage、StoryType（映射游戏 JSON 结构）
-├── configs.py           # 路径与常量配置
+├── main.py              # 兼容入口，转发至包内 CLI
+├── ark_text_extractor/  # 提取器实现
+│   ├── avg_syntax.py    # AVG 指令与属性的词法解析
+│   ├── avg_parser.py    # 指令语义与文本事件生成
+│   ├── command_registry.py # 全量指令及正文策略注册表
+│   ├── domain.py        # Chapter、Stage 与事件模型
+│   ├── game_data.py     # 游戏索引及源文件加载
+│   ├── known_warnings.py # 已人工确认的上游脚本噪声
+│   ├── renderers.py     # TXT / JSONL 渲染
+│   ├── pipeline.py      # 提取流程与覆盖率报告
+│   ├── config.py        # 无副作用路径配置
+│   └── cli.py           # 命令行参数
+├── tests/               # 单元测试与全语料审计
 ├── ArknightsGameData/   # Git 子模块，游戏原始数据（zh_CN）
 └── output/              # 提取产物（已加入 .gitignore）
     ├── activity/        # 别传
@@ -28,7 +37,7 @@ Agent 在本仓库中承担两类职责：
 
 ## 二、任务一：提取器开发
 
-### 2.1 数据模型（`models.py`）
+### 2.1 数据模型（`ark_text_extractor/domain.py`）
 
 - **`StoryType`**（StrEnum）：剧情分类枚举
   - `ACTIVITY` — 别传 → `output/activity/`
@@ -36,27 +45,26 @@ Agent 在本仓库中承担两类职责：
   - `MAINLINE` — 主线剧情 → `output/main/`
   - `NONE` — 干员密录 → `output/other/`
 - **`Chapter`**：章节，包含 `id`、`name`、`entryType: StoryType`、`infoUnlockDatas: list[Stage]`
-- **`Stage`**：单个剧情节点，包含 `storyId`、`storyCode`、`storyName`、`storyInfo`、`storyTxt`、`avgTag`
+- **`Stage`**：单个剧情节点，包含 `storyId`、`storyCode`、`storyName`、`storyInfo`、`storyTxt`、`avgTag`、`storySort`
+- **`TextEvent`**：解析后的语义事件，保存类型、正文、角色、选项、分支、源文件与行号
 
 ### 2.2 提取流程
 
 1. `main.py` 读取 `STORY_REVIEW_TABLE`（`story_review_table.json`），解析为 `list[Chapter]`
-2. 按 `StoryType` 分类处理：
-   - `ACTIVITY` / `MINI_ACTIVITY` / `MAINLINE` → `extract_normal()`：按章节创建子文件夹，逐 Stage 生成独立 `.txt`，并汇总为 `00_{chapter_name}.txt`
-   - `NONE`（干员密录）→ `extract_other()`：直接输出到 `output/other/`，单 Stage 为单文件，多 Stage 带序号后缀
-3. `extractor.extract_stage()` 负责单个 Stage 的文本提取：
-   - 读取 `storyInfo`（梗概）和 `storyTxt`（对话）原始文件
-   - 调用 `extract_dialog()` 解析对话标签（`[name=]`、`[Sticker]`、`[Subtitle]`、`[animtext]`）
-   - 输出格式化 `.txt`：标题 → 故事梗概 → 对话文本
+2. `avg_syntax.py` 以引号感知扫描器解析指令、参数与行尾正文，不使用整行贪婪正则
+3. `avg_parser.py` 将 `[name]`、`[multiline]`、`[Decision]`、`[Predicate]`、`[Sticker]`、`[Subtitle]`、`[animtext]`、`[spellsticker]` 等转换为语义事件
+4. `pipeline.py` 按 `StoryType` 分类、按 `storySort` 排序并生成章节文件；默认兼容原 TXT 路径，也可生成 JSONL
+5. 所有正文和纯演出指令都必须登记在 `command_registry.py`；未知指令或未声明文本必须立即报错
+6. 已确认的源数据噪声只能用“相对路径 + 完整原始行”加入 `known_warnings.py`，禁止使用宽泛正文规则
 
-### 2.3 路径配置（`configs.py`）
+### 2.3 路径配置（`ark_text_extractor/config.py`）
 
 | 变量 | 路径 |
 |---|---|
-| `GAME_DATA_DIR` | `./ArknightsGameData/zh_CN` |
-| `STORY_REVIEW_TABLE` | `gamedata/excel/story_review_table.json` |
-| `STORY_DIR` | `gamedata/story/` |
-| `OUTPUT_DIR` | `./output` |
+| `Settings.game_data_dir` | `./ArknightsGameData/zh_CN` |
+| `Settings.story_review_table` | `gamedata/excel/story_review_table.json` |
+| `Settings.story_dir` | `gamedata/story/` |
+| `Settings.output_dir` | `./output` |
 
 ### 2.4 开发规范
 
@@ -65,7 +73,8 @@ Agent 在本仓库中承担两类职责：
 - 类型注解使用 Python 3.12+ 语法（`list[...]`、`dict[...]`）
 - 数据模型使用 `@dataclass`，字段名与游戏 JSON key 保持一致
 - 文件名经 `sanitize_filename()` 清洗非法字符
-- 修改代码后运行 `python main.py` 验证输出是否正确
+- 修改代码后运行 `python -m unittest discover -v` 和 `python main.py` 验证
+- 新增正文承载指令时必须同步增加单元测试及全语料覆盖断言
 
 ---
 

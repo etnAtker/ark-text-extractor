@@ -1,7 +1,10 @@
 [project]
 name = "ark-text-extractor"
 version = "0.1.0"
-description = "Add your description here"
+description = "面向阅读和大模型分析的明日方舟剧情文本提取器"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = []
+
+[project.scripts]
+ark-text-extractor = "ark_text_extractor.cli:main"
