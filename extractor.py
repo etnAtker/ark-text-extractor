@@ -42,6 +42,9 @@ def extract_dialog(lines: str):
             dialog_lines.append(chunk.replace(r"\n", "\n") + "\n")
         elif striped.startswith("[animtext("):
             matches = re.search(r"^\[animtext\(.+\]\s?(.*)$", line)
+            if not matches:
+                raise ValueError(f"Invalid dialog line: {line}")
+
             dialog_lines.append(f"{matches.group(1)}\n")
 
         elif not line.strip().startswith("["):
